@@ -4,7 +4,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F5F7FB"
-    android:fillViewport="true">
+    android:fillViewport="true"
+    android:scrollbars="vertical"
+    android:overScrollMode="ifContentScrolls"
+    android:descendantFocusability="beforeDescendants">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -12,6 +15,7 @@
         android:orientation="vertical"
         android:padding="24dp">
 
+        <!-- App Title -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -20,6 +24,7 @@
             android:textSize="28sp"
             android:textStyle="bold" />
 
+        <!-- Welcome Section -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -38,6 +43,7 @@
             android:textSize="15sp"
             android:lineSpacingExtra="4dp" />
 
+        <!-- Resume Upload -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -64,6 +70,7 @@
             android:textColor="#697386"
             android:textSize="13sp" />
 
+        <!-- Job Description -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -82,11 +89,15 @@
             android:gravity="top|start"
             android:hint="Paste the job description here (optional)"
             android:inputType="textMultiLine|textCapSentences"
+            android:maxLines="6"
+            android:nestedScrollingEnabled="false"
             android:padding="14dp"
+            android:scrollbars="vertical"
             android:textColor="#17213A"
             android:textColorHint="#929BAA"
             android:textSize="14sp" />
 
+        <!-- Analyze Button -->
         <Button
             android:id="@+id/btnAnalyze"
             android:layout_width="match_parent"
@@ -99,11 +110,12 @@
             android:textSize="16sp"
             android:textStyle="bold" />
 
+        <!-- Analysis Results -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
-            android:text="3. Extracted Resume Text"
+            android:text="3. Resume Analysis Results"
             android:textColor="#17213A"
             android:textSize="19sp"
             android:textStyle="bold" />
@@ -118,8 +130,10 @@
             android:text="Your extracted resume content will appear here."
             android:textColor="#17213A"
             android:textSize="14sp"
-            android:lineSpacingExtra="4dp" />
+            android:lineSpacingExtra="4dp"
+            android:scrollbars="none" />
 
+        <!-- Previous Analyses -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

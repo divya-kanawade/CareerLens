@@ -4,6 +4,7 @@ package com.example.careerlens;
 import android.net.Uri;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -20,6 +21,7 @@ import com.tom_roush.pdfbox.pdmodel.PDDocument;
 import com.tom_roush.pdfbox.text.PDFTextStripper;
 
 import java.io.InputStream;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -27,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView tvResumeStatus;
     private TextView tvExtractedText;
+    private EditText etJobDescription;
 
     private Uri selectedResumeUri;
     private String extractedResumeText = "";
@@ -41,7 +44,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         WindowCompat.enableEdgeToEdge(getWindow());
-
         setContentView(R.layout.activity_main);
 
         ViewCompat.setOnApplyWindowInsetsListener(
@@ -74,6 +76,9 @@ public class MainActivity extends AppCompatActivity {
         tvExtractedText =
                 findViewById(R.id.tvExtractedText);
 
+        etJobDescription =
+                findViewById(R.id.etJobDescription);
+
         pdfPickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.GetContent(),
                 uri -> {
@@ -104,14 +109,23 @@ public class MainActivity extends AppCompatActivity {
         );
 
         btnAnalyze.setOnClickListener(v -> {
-            if (extractedResumeText.isEmpty()) {
+
+            if (extractedResumeText.trim().isEmpty()) {
                 Toast.makeText(
                         MainActivity.this,
                         "Please select a readable resume PDF first.",
                         Toast.LENGTH_SHORT
                 ).show();
-            } else {
+                return;
+            }
+
+            String jobDescription =
+                    etJobDescription.getText().toString().trim();
+
+            if (jobDescription.isEmpty()) {
                 analyzeResume();
+            } else {
+                analyzeJobMatch(jobDescription);
             }
         });
     }
@@ -206,9 +220,38 @@ public class MainActivity extends AppCompatActivity {
         tvExtractedText.setText(report.toString());
     }
 
+    private void analyzeJobMatch(String jobDescription) {
+
+        JobMatcher.MatchResult result =
+                JobMatcher.compare(
+                        extractedResumeText,
+                        jobDescription
+                );
+
+        StringBuilder report = new StringBuilder();
+
+        report.append("========== JOB MATCH ANALYSIS ==========\n\n");
+
+        report.append("RESUME MATCH SCORE\n");
+        report.append(result.matchScore).append("%\n\n");
+
+        report.append("MATCHING SKILLS\n\n");
+        appendList(report, result.matchingSkills);
+
+        report.append("\nMISSING SKILLS\n\n");
+        appendList(report, result.missingSkills);
+
+        report.append("\nIMPROVEMENT SUGGESTIONS\n\n");
+        appendList(report, result.suggestions);
+
+        report.append("\n========================================");
+
+        tvExtractedText.setText(report.toString());
+    }
+
     private void appendList(
             StringBuilder report,
-            java.util.List<String> items) {
+            List<String> items) {
 
         if (items.isEmpty()) {
             report.append("No information detected.\n");
