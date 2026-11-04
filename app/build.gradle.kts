@@ -4,6 +4,7 @@ plugins {
 
 android {
     namespace = "com.example.careerlens"
+
     compileSdk {
         version = release(37)
     }
@@ -26,6 +27,7 @@ android {
             }
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -37,6 +39,10 @@ dependencies {
     implementation(libs.appcompat)
     implementation(libs.constraintlayout)
     implementation(libs.material)
+
+    // PDF text extraction library
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)
