@@ -1,0 +1,129 @@
+
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F7FB"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <!-- App Branding -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CareerLens"
+            android:textColor="#3457D5"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:text="Hello, Welcome!"
+            android:textColor="#17213A"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Your personal AI-powered resume assistant. Build a stronger resume and discover your career opportunities."
+            android:textColor="#697386"
+            android:textSize="15sp"
+            android:lineSpacingExtra="4dp" />
+
+        <!-- Resume Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:text="1. Upload Your Resume"
+            android:textColor="#17213A"
+            android:textSize="19sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnUploadResume"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Choose Resume PDF"
+            android:textAllCaps="false" />
+
+        <TextView
+            android:id="@+id/tvResumeStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="No resume selected"
+            android:textColor="#697386"
+            android:textSize="13sp" />
+
+        <!-- Job Description Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="2. Add Job Description"
+            android:textColor="#17213A"
+            android:textSize="19sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/etJobDescription"
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:layout_marginTop="12dp"
+            android:background="#FFFFFF"
+            android:gravity="top|start"
+            android:hint="Paste the job description here (optional)"
+            android:inputType="textMultiLine|textCapSentences"
+            android:padding="14dp"
+            android:textColor="#17213A"
+            android:textColorHint="#929BAA"
+            android:textSize="14sp" />
+
+        <!-- Analyse Button -->
+        <Button
+            android:id="@+id/btnAnalyze"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="28dp"
+            android:backgroundTint="#3457D5"
+            android:text="Analyse My Resume"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <!-- History Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="36dp"
+            android:text="Previous Analyses"
+            android:textColor="#17213A"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvHistory"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="#FFFFFF"
+            android:padding="18dp"
+            android:text="Your saved resume analyses will appear here."
+            android:textColor="#697386"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+
+</ScrollView>
