@@ -29,10 +29,13 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView tvResumeStatus;
     private TextView tvExtractedText;
+    private TextView tvHistory;
     private EditText etJobDescription;
 
     private Uri selectedResumeUri;
     private String extractedResumeText = "";
+
+    private DatabaseHelper databaseHelper;
 
     private ActivityResultLauncher<String> pdfPickerLauncher;
 
@@ -64,20 +67,19 @@ public class MainActivity extends AppCompatActivity {
 
         PDFBoxResourceLoader.init(getApplicationContext());
 
-        Button btnUploadResume =
-                findViewById(R.id.btnUploadResume);
+        databaseHelper = new DatabaseHelper(this);
 
-        Button btnAnalyze =
-                findViewById(R.id.btnAnalyze);
+        Button btnUploadResume = findViewById(R.id.btnUploadResume);
+        Button btnAnalyze = findViewById(R.id.btnAnalyze);
 
-        tvResumeStatus =
-                findViewById(R.id.tvResumeStatus);
+        tvResumeStatus = findViewById(R.id.tvResumeStatus);
+        tvExtractedText = findViewById(R.id.tvExtractedText);
+        tvHistory = findViewById(R.id.tvHistory);
 
-        tvExtractedText =
-                findViewById(R.id.tvExtractedText);
+        etJobDescription = findViewById(R.id.etJobDescription);
 
-        etJobDescription =
-                findViewById(R.id.etJobDescription);
+        // Display previously saved analyses
+        loadHistory();
 
         pdfPickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.GetContent(),
@@ -87,19 +89,15 @@ public class MainActivity extends AppCompatActivity {
                         extractedResumeText = "";
 
                         tvResumeStatus.setText(
-                                "Resume selected successfully!"
-                        );
+                                "Resume selected successfully!");
 
                         tvExtractedText.setText(
-                                "Reading your resume..."
-                        );
+                                "Reading your resume...");
 
                         extractPdfText(uri);
 
                     } else {
-                        tvResumeStatus.setText(
-                                "No resume selected"
-                        );
+                        tvResumeStatus.setText("No resume selected");
                     }
                 }
         );
@@ -159,9 +157,7 @@ public class MainActivity extends AppCompatActivity {
                         } else {
                             extractedResumeText = extractedText;
 
-                            tvExtractedText.setText(
-                                    extractedText
-                            );
+                            tvExtractedText.setText(extractedText);
 
                             Toast.makeText(
                                     MainActivity.this,
@@ -218,6 +214,27 @@ public class MainActivity extends AppCompatActivity {
         report.append("\n=====================================");
 
         tvExtractedText.setText(report.toString());
+
+        // Save general resume analysis in SQLite
+        String resumeName = getResumeName();
+
+        long savedId = databaseHelper.saveAnalysis(
+                resumeName,
+                0,
+                joinList(result.skills),
+                "Not applicable",
+                joinList(result.suggestions)
+        );
+
+        if (savedId != -1) {
+            Toast.makeText(
+                    this,
+                    "Resume analysis saved successfully!",
+                    Toast.LENGTH_SHORT
+            ).show();
+        }
+
+        loadHistory();
     }
 
     private void analyzeJobMatch(String jobDescription) {
@@ -247,13 +264,71 @@ public class MainActivity extends AppCompatActivity {
         report.append("\n========================================");
 
         tvExtractedText.setText(report.toString());
+
+        // Save job match analysis in SQLite
+        String resumeName = getResumeName();
+
+        long savedId = databaseHelper.saveAnalysis(
+                resumeName,
+                result.matchScore,
+                joinList(result.matchingSkills),
+                joinList(result.missingSkills),
+                joinList(result.suggestions)
+        );
+
+        if (savedId != -1) {
+            Toast.makeText(
+                    this,
+                    "Job match analysis saved successfully!",
+                    Toast.LENGTH_SHORT
+            ).show();
+        }
+
+        loadHistory();
+    }
+
+    private String getResumeName() {
+        if (selectedResumeUri != null &&
+                selectedResumeUri.getLastPathSegment() != null) {
+            return selectedResumeUri.getLastPathSegment();
+        }
+
+        return "Selected Resume";
+    }
+
+    private String joinList(List<String> items) {
+        if (items == null || items.isEmpty()) {
+            return "None";
+        }
+
+        return android.text.TextUtils.join(", ", items);
+    }
+
+    private void loadHistory() {
+
+        List<String> history = databaseHelper.getAllAnalyses();
+
+        if (history.isEmpty()) {
+            tvHistory.setText("No previous analyses yet.");
+            return;
+        }
+
+        StringBuilder historyText = new StringBuilder();
+
+        historyText.append("========== SAVED ANALYSES ==========\n\n");
+
+        for (String record : history) {
+            historyText.append(record).append("\n\n");
+        }
+
+        tvHistory.setText(historyText.toString());
     }
 
     private void appendList(
             StringBuilder report,
             List<String> items) {
 
-        if (items.isEmpty()) {
+        if (items == null || items.isEmpty()) {
             report.append("No information detected.\n");
             return;
         }
