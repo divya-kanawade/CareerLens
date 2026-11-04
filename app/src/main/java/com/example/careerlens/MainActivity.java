@@ -29,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvExtractedText;
 
     private Uri selectedResumeUri;
+    private String extractedResumeText = "";
 
     private ActivityResultLauncher<String> pdfPickerLauncher;
 
@@ -64,6 +65,9 @@ public class MainActivity extends AppCompatActivity {
         Button btnUploadResume =
                 findViewById(R.id.btnUploadResume);
 
+        Button btnAnalyze =
+                findViewById(R.id.btnAnalyze);
+
         tvResumeStatus =
                 findViewById(R.id.tvResumeStatus);
 
@@ -75,9 +79,14 @@ public class MainActivity extends AppCompatActivity {
                 uri -> {
                     if (uri != null) {
                         selectedResumeUri = uri;
+                        extractedResumeText = "";
 
                         tvResumeStatus.setText(
                                 "Resume selected successfully!"
+                        );
+
+                        tvExtractedText.setText(
+                                "Reading your resume..."
                         );
 
                         extractPdfText(uri);
@@ -93,11 +102,21 @@ public class MainActivity extends AppCompatActivity {
         btnUploadResume.setOnClickListener(v ->
                 pdfPickerLauncher.launch("application/pdf")
         );
+
+        btnAnalyze.setOnClickListener(v -> {
+            if (extractedResumeText.isEmpty()) {
+                Toast.makeText(
+                        MainActivity.this,
+                        "Please select a readable resume PDF first.",
+                        Toast.LENGTH_SHORT
+                ).show();
+            } else {
+                analyzeResume();
+            }
+        });
     }
 
     private void extractPdfText(Uri pdfUri) {
-
-        tvExtractedText.setText("Reading your resume...");
 
         executorService.execute(() -> {
 
@@ -108,23 +127,33 @@ public class MainActivity extends AppCompatActivity {
                     throw new Exception("Unable to open PDF file.");
                 }
 
-                try (PDDocument document =
-                             PDDocument.load(inputStream)) {
+                try (PDDocument document = PDDocument.load(inputStream)) {
 
-                    PDFTextStripper textStripper =
-                            new PDFTextStripper();
+                    PDFTextStripper textStripper = new PDFTextStripper();
 
                     String extractedText =
                             textStripper.getText(document);
 
                     runOnUiThread(() -> {
                         if (extractedText.trim().isEmpty()) {
+                            extractedResumeText = "";
+
                             tvExtractedText.setText(
                                     "No readable text found in this PDF. " +
                                             "It may contain scanned images."
                             );
                         } else {
-                            tvExtractedText.setText(extractedText);
+                            extractedResumeText = extractedText;
+
+                            tvExtractedText.setText(
+                                    extractedText
+                            );
+
+                            Toast.makeText(
+                                    MainActivity.this,
+                                    "Resume text extracted successfully!",
+                                    Toast.LENGTH_SHORT
+                            ).show();
                         }
                     });
                 }
@@ -132,6 +161,8 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception e) {
 
                 runOnUiThread(() -> {
+                    extractedResumeText = "";
+
                     tvExtractedText.setText(
                             "Could not read PDF: " + e.getMessage()
                     );
@@ -144,6 +175,49 @@ public class MainActivity extends AppCompatActivity {
                 });
             }
         });
+    }
+
+    private void analyzeResume() {
+
+        ResumeAnalyzer.AnalysisResult result =
+                ResumeAnalyzer.analyze(extractedResumeText);
+
+        StringBuilder report = new StringBuilder();
+
+        report.append("========== RESUME ANALYSIS ==========\n\n");
+
+        report.append("1. TECHNICAL SKILLS\n\n");
+        appendList(report, result.skills);
+
+        report.append("\n2. EDUCATION DETAILS\n\n");
+        appendList(report, result.education);
+
+        report.append("\n3. WORK EXPERIENCE\n\n");
+        appendList(report, result.experience);
+
+        report.append("\n4. PROJECTS\n\n");
+        appendList(report, result.projects);
+
+        report.append("\n5. IMPROVEMENT SUGGESTIONS\n\n");
+        appendList(report, result.suggestions);
+
+        report.append("\n=====================================");
+
+        tvExtractedText.setText(report.toString());
+    }
+
+    private void appendList(
+            StringBuilder report,
+            java.util.List<String> items) {
+
+        if (items.isEmpty()) {
+            report.append("No information detected.\n");
+            return;
+        }
+
+        for (String item : items) {
+            report.append("• ").append(item).append("\n");
+        }
     }
 
     @Override
