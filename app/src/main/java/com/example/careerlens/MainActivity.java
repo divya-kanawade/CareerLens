@@ -1,8 +1,10 @@
 
 package com.example.careerlens;
 
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.provider.OpenableColumns;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -11,10 +13,6 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowCompat;
-import androidx.core.view.WindowInsetsCompat;
 
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
 import com.tom_roush.pdfbox.pdmodel.PDDocument;
@@ -27,77 +25,48 @@ import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
-    private TextView tvResumeStatus;
-    private TextView tvExtractedText;
-    private TextView tvHistory;
+    private Button btnUploadResume, btnAnalyze;
+    private TextView tvResumeStatus, tvExtractedText, tvHistory;
     private EditText etJobDescription;
 
     private Uri selectedResumeUri;
     private String extractedResumeText = "";
+    private String selectedResumeName = "Resume.pdf";
 
     private DatabaseHelper databaseHelper;
+    private ExecutorService executorService;
 
     private ActivityResultLauncher<String> pdfPickerLauncher;
-
-    private final ExecutorService executorService =
-            Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        WindowCompat.enableEdgeToEdge(getWindow());
         setContentView(R.layout.activity_main);
-
-        ViewCompat.setOnApplyWindowInsetsListener(
-                findViewById(R.id.main), (v, insets) -> {
-
-                    Insets systemBars = insets.getInsets(
-                            WindowInsetsCompat.Type.systemBars());
-
-                    v.setPadding(
-                            systemBars.left,
-                            systemBars.top,
-                            systemBars.right,
-                            systemBars.bottom
-                    );
-
-                    return insets;
-                });
 
         PDFBoxResourceLoader.init(getApplicationContext());
 
+        executorService = Executors.newSingleThreadExecutor();
         databaseHelper = new DatabaseHelper(this);
 
-        Button btnUploadResume = findViewById(R.id.btnUploadResume);
-        Button btnAnalyze = findViewById(R.id.btnAnalyze);
-
+        btnUploadResume = findViewById(R.id.btnUploadResume);
+        btnAnalyze = findViewById(R.id.btnAnalyze);
         tvResumeStatus = findViewById(R.id.tvResumeStatus);
         tvExtractedText = findViewById(R.id.tvExtractedText);
         tvHistory = findViewById(R.id.tvHistory);
-
         etJobDescription = findViewById(R.id.etJobDescription);
-
-        // Display previously saved analyses
-        loadHistory();
 
         pdfPickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.GetContent(),
                 uri -> {
                     if (uri != null) {
                         selectedResumeUri = uri;
-                        extractedResumeText = "";
+                        selectedResumeName = getFileName(uri);
 
                         tvResumeStatus.setText(
-                                "Resume selected successfully!");
-
-                        tvExtractedText.setText(
-                                "Reading your resume...");
+                                "Selected: " + selectedResumeName
+                        );
 
                         extractPdfText(uri);
-
-                    } else {
-                        tvResumeStatus.setText("No resume selected");
                     }
                 }
         );
@@ -110,8 +79,8 @@ public class MainActivity extends AppCompatActivity {
 
             if (extractedResumeText.trim().isEmpty()) {
                 Toast.makeText(
-                        MainActivity.this,
-                        "Please select a readable resume PDF first.",
+                        this,
+                        "Please select a resume first",
                         Toast.LENGTH_SHORT
                 ).show();
                 return;
@@ -126,117 +95,146 @@ public class MainActivity extends AppCompatActivity {
                 analyzeJobMatch(jobDescription);
             }
         });
+
+        loadHistory();
     }
 
-    private void extractPdfText(Uri pdfUri) {
+    // Get selected PDF filename
+    private String getFileName(Uri uri) {
+
+        String fileName = "Resume.pdf";
+
+        Cursor cursor = getContentResolver().query(
+                uri,
+                null,
+                null,
+                null,
+                null
+        );
+
+        if (cursor != null) {
+            try {
+                if (cursor.moveToFirst()) {
+                    int index = cursor.getColumnIndex(
+                            OpenableColumns.DISPLAY_NAME
+                    );
+
+                    if (index != -1) {
+                        fileName = cursor.getString(index);
+                    }
+                }
+            } finally {
+                cursor.close();
+            }
+        }
+
+        return fileName;
+    }
+
+    // Extract text from PDF
+    private void extractPdfText(Uri uri) {
+
+        tvExtractedText.setText("Extracting resume text...");
 
         executorService.execute(() -> {
 
+            String extractedText = "";
+
             try (InputStream inputStream =
-                         getContentResolver().openInputStream(pdfUri)) {
+                         getContentResolver().openInputStream(uri)) {
 
                 if (inputStream == null) {
-                    throw new Exception("Unable to open PDF file.");
+                    throw new Exception("Unable to open PDF");
                 }
 
-                try (PDDocument document = PDDocument.load(inputStream)) {
+                try (PDDocument document =
+                             PDDocument.load(inputStream)) {
 
-                    PDFTextStripper textStripper = new PDFTextStripper();
-
-                    String extractedText =
-                            textStripper.getText(document);
-
-                    runOnUiThread(() -> {
-                        if (extractedText.trim().isEmpty()) {
-                            extractedResumeText = "";
-
-                            tvExtractedText.setText(
-                                    "No readable text found in this PDF. " +
-                                            "It may contain scanned images."
-                            );
-                        } else {
-                            extractedResumeText = extractedText;
-
-                            tvExtractedText.setText(extractedText);
-
-                            Toast.makeText(
-                                    MainActivity.this,
-                                    "Resume text extracted successfully!",
-                                    Toast.LENGTH_SHORT
-                            ).show();
-                        }
-                    });
+                    PDFTextStripper stripper = new PDFTextStripper();
+                    extractedText = stripper.getText(document);
                 }
 
             } catch (Exception e) {
+                e.printStackTrace();
+            }
 
-                runOnUiThread(() -> {
+            String finalText = extractedText;
+
+            runOnUiThread(() -> {
+
+                if (finalText.trim().isEmpty()) {
+
                     extractedResumeText = "";
 
                     tvExtractedText.setText(
-                            "Could not read PDF: " + e.getMessage()
+                            "No readable text found. Please select a text-based PDF."
                     );
 
                     Toast.makeText(
                             MainActivity.this,
-                            "PDF extraction failed",
+                            "Could not extract text from PDF",
                             Toast.LENGTH_LONG
                     ).show();
-                });
-            }
+
+                } else {
+
+                    extractedResumeText = finalText;
+
+                    tvExtractedText.setText(
+                            "Resume text extracted successfully.\n\n"
+                                    + finalText
+                    );
+
+                    Toast.makeText(
+                            MainActivity.this,
+                            "Resume uploaded successfully",
+                            Toast.LENGTH_SHORT
+                    ).show();
+                }
+            });
         });
     }
 
+    // General resume analysis
     private void analyzeResume() {
 
         ResumeAnalyzer.AnalysisResult result =
                 ResumeAnalyzer.analyze(extractedResumeText);
 
-        StringBuilder report = new StringBuilder();
+        String skills = listToString(result.skills);
+        String education = listToString(result.education);
+        String experience = listToString(result.experience);
+        String projects = listToString(result.projects);
+        String suggestions = listToString(result.suggestions);
 
-        report.append("========== RESUME ANALYSIS ==========\n\n");
+        String output =
+                "RESUME ANALYSIS\n\n"
+                        + "Skills:\n" + skills + "\n\n"
+                        + "Education:\n" + education + "\n\n"
+                        + "Experience:\n" + experience + "\n\n"
+                        + "Projects:\n" + projects + "\n\n"
+                        + "Suggestions:\n" + suggestions;
 
-        report.append("1. TECHNICAL SKILLS\n\n");
-        appendList(report, result.skills);
+        tvExtractedText.setText(output);
 
-        report.append("\n2. EDUCATION DETAILS\n\n");
-        appendList(report, result.education);
-
-        report.append("\n3. WORK EXPERIENCE\n\n");
-        appendList(report, result.experience);
-
-        report.append("\n4. PROJECTS\n\n");
-        appendList(report, result.projects);
-
-        report.append("\n5. IMPROVEMENT SUGGESTIONS\n\n");
-        appendList(report, result.suggestions);
-
-        report.append("\n=====================================");
-
-        tvExtractedText.setText(report.toString());
-
-        // Save general resume analysis in SQLite
-        String resumeName = getResumeName();
-
-        long savedId = databaseHelper.saveAnalysis(
-                resumeName,
+        databaseHelper.saveAnalysis(
+                selectedResumeName,
                 0,
-                joinList(result.skills),
-                "Not applicable",
-                joinList(result.suggestions)
+                skills,
+                "",
+                suggestions
         );
 
-        if (savedId != -1) {
-            Toast.makeText(
-                    this,
-                    "Resume analysis saved successfully!",
-                    Toast.LENGTH_SHORT
-            ).show();
-        }
-
         loadHistory();
+
+        Toast.makeText(
+                this,
+                "Resume analysis completed and saved",
+                Toast.LENGTH_SHORT
+        ).show();
     }
 
+    // Job description matching
     private void analyzeJobMatch(String jobDescription) {
 
         JobMatcher.MatchResult result =
@@ -245,102 +243,131 @@ public class MainActivity extends AppCompatActivity {
                         jobDescription
                 );
 
-        StringBuilder report = new StringBuilder();
+        String matchingSkills =
+                listToString(result.matchingSkills);
 
-        report.append("========== JOB MATCH ANALYSIS ==========\n\n");
+        String missingSkills =
+                listToString(result.missingSkills);
 
-        report.append("RESUME MATCH SCORE\n");
-        report.append(result.matchScore).append("%\n\n");
+        String suggestions =
+                listToString(result.suggestions);
 
-        report.append("MATCHING SKILLS\n\n");
-        appendList(report, result.matchingSkills);
+        String educationResult;
 
-        report.append("\nMISSING SKILLS\n\n");
-        appendList(report, result.missingSkills);
+        if (result.educationRequired) {
+            educationResult =
+                    result.educationMatch
+                            + "\nEducation Score: "
+                            + result.educationScore + "%";
+        } else {
+            educationResult =
+                    "No specific education requirement detected in the job description.";
+        }
 
-        report.append("\nIMPROVEMENT SUGGESTIONS\n\n");
-        appendList(report, result.suggestions);
+        String experienceResult;
 
-        report.append("\n========================================");
+        if (result.experienceRequired) {
+            experienceResult =
+                    result.experienceMatch
+                            + "\nExperience Score: "
+                            + result.experienceScore + "%";
+        } else {
+            experienceResult =
+                    result.experienceMatch;
+        }
 
-        tvExtractedText.setText(report.toString());
+        String output =
+                "JOB DESCRIPTION MATCH RESULT\n\n"
 
-        // Save job match analysis in SQLite
-        String resumeName = getResumeName();
+                        + "OVERALL MATCH SCORE\n"
+                        + result.matchScore + "%\n\n"
 
-        long savedId = databaseHelper.saveAnalysis(
-                resumeName,
+                        + "SKILLS MATCH\n"
+                        + "Skill Score: " + result.skillScore + "%\n\n"
+
+                        + "Matching Skills:\n"
+                        + matchingSkills + "\n"
+
+                        + "Missing Skills:\n"
+                        + missingSkills + "\n\n"
+
+                        + "EDUCATION MATCH\n"
+                        + educationResult + "\n\n"
+
+                        + "EXPERIENCE MATCH\n"
+                        + experienceResult + "\n\n"
+
+                        + "SUGGESTIONS\n"
+                        + suggestions;
+
+        tvExtractedText.setText(output);
+
+        // Save analysis in SQLite
+        databaseHelper.saveAnalysis(
+                selectedResumeName,
                 result.matchScore,
-                joinList(result.matchingSkills),
-                joinList(result.missingSkills),
-                joinList(result.suggestions)
+                matchingSkills,
+                missingSkills,
+                suggestions
         );
 
-        if (savedId != -1) {
-            Toast.makeText(
-                    this,
-                    "Job match analysis saved successfully!",
-                    Toast.LENGTH_SHORT
-            ).show();
-        }
-
         loadHistory();
+
+        Toast.makeText(
+                this,
+                "Job matching completed and saved",
+                Toast.LENGTH_SHORT
+        ).show();
     }
 
-    private String getResumeName() {
-        if (selectedResumeUri != null &&
-                selectedResumeUri.getLastPathSegment() != null) {
-            return selectedResumeUri.getLastPathSegment();
-        }
+    // Convert list into readable text
+    private String listToString(List<String> items) {
 
-        return "Selected Resume";
-    }
-
-    private String joinList(List<String> items) {
         if (items == null || items.isEmpty()) {
-            return "None";
+            return "Not detected";
         }
 
-        return android.text.TextUtils.join(", ", items);
+        StringBuilder builder = new StringBuilder();
+
+        for (String item : items) {
+            builder.append("• ")
+                    .append(item)
+                    .append("\n");
+        }
+
+        return builder.toString();
     }
 
+    // Load saved analysis history
     private void loadHistory() {
 
         List<String> history = databaseHelper.getAllAnalyses();
 
-        if (history.isEmpty()) {
-            tvHistory.setText("No previous analyses yet.");
-            return;
+        StringBuilder builder = new StringBuilder();
+
+        builder.append("PREVIOUS ANALYSES\n\n");
+
+        if (history == null || history.isEmpty()) {
+            builder.append("No previous analyses found.");
+        } else {
+            for (String item : history) {
+                builder.append(item).append("\n\n");
+            }
         }
 
-        StringBuilder historyText = new StringBuilder();
-
-        historyText.append("========== SAVED ANALYSES ==========\n\n");
-
-        for (String record : history) {
-            historyText.append(record).append("\n\n");
-        }
-
-        tvHistory.setText(historyText.toString());
-    }
-
-    private void appendList(
-            StringBuilder report,
-            List<String> items) {
-
-        if (items == null || items.isEmpty()) {
-            report.append("No information detected.\n");
-            return;
-        }
-
-        for (String item : items) {
-            report.append("• ").append(item).append("\n");
-        }
+        tvHistory.setText(builder.toString());
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        executorService.shutdown();
+
+        if (executorService != null) {
+            executorService.shutdown();
+        }
+
+        if (databaseHelper != null) {
+            databaseHelper.close();
+        }
     }
 }
