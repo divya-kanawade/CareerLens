@@ -105,11 +105,7 @@ public class MainActivity extends AppCompatActivity {
         String fileName = "Resume.pdf";
 
         Cursor cursor = getContentResolver().query(
-                uri,
-                null,
-                null,
-                null,
-                null
+                uri, null, null, null, null
         );
 
         if (cursor != null) {
@@ -205,23 +201,45 @@ public class MainActivity extends AppCompatActivity {
         String education = listToString(result.education);
         String experience = listToString(result.experience);
         String projects = listToString(result.projects);
+        String missingSections = listToString(result.missingSections);
         String suggestions = listToString(result.suggestions);
 
         String output =
                 "RESUME ANALYSIS\n\n"
-                        + "Skills:\n" + skills + "\n\n"
-                        + "Education:\n" + education + "\n\n"
-                        + "Experience:\n" + experience + "\n\n"
-                        + "Projects:\n" + projects + "\n\n"
-                        + "Suggestions:\n" + suggestions;
+
+                        + "RESUME QUALITY SCORE\n"
+                        + result.qualityScore + "/100\n\n"
+
+                        + "SECTION COMPLETENESS\n"
+                        + result.completedSections + " out of "
+                        + result.totalSections + " sections detected\n\n"
+
+                        + "MISSING SECTIONS\n"
+                        + missingSections + "\n"
+
+                        + "SKILLS\n"
+                        + skills + "\n"
+
+                        + "EDUCATION\n"
+                        + education + "\n"
+
+                        + "EXPERIENCE\n"
+                        + experience + "\n"
+
+                        + "PROJECTS\n"
+                        + projects + "\n"
+
+                        + "IMPROVEMENT SUGGESTIONS\n"
+                        + suggestions;
 
         tvExtractedText.setText(output);
 
+        // Save analysis in SQLite
         databaseHelper.saveAnalysis(
                 selectedResumeName,
                 0,
                 skills,
-                "",
+                missingSections,
                 suggestions
         );
 
@@ -272,8 +290,7 @@ public class MainActivity extends AppCompatActivity {
                             + "\nExperience Score: "
                             + result.experienceScore + "%";
         } else {
-            experienceResult =
-                    result.experienceMatch;
+            experienceResult = result.experienceMatch;
         }
 
         String output =
