@@ -7,7 +7,8 @@
     android:fillViewport="true"
     android:scrollbars="vertical"
     android:overScrollMode="ifContentScrolls"
-    android:descendantFocusability="beforeDescendants">
+    android:descendantFocusability="beforeDescendants"
+    android:focusableInTouchMode="true">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -83,14 +84,13 @@
         <EditText
             android:id="@+id/etJobDescription"
             android:layout_width="match_parent"
-            android:layout_height="150dp"
+            android:layout_height="wrap_content"
+            android:minHeight="150dp"
             android:layout_marginTop="12dp"
             android:background="#FFFFFF"
             android:gravity="top|start"
             android:hint="Paste the job description here (optional)"
             android:inputType="textMultiLine|textCapSentences"
-            android:maxLines="6"
-            android:nestedScrollingEnabled="false"
             android:padding="14dp"
             android:scrollbars="vertical"
             android:textColor="#17213A"
@@ -130,8 +130,7 @@
             android:text="Your extracted resume content will appear here."
             android:textColor="#17213A"
             android:textSize="14sp"
-            android:lineSpacingExtra="4dp"
-            android:scrollbars="none" />
+            android:lineSpacingExtra="4dp" />
 
         <!-- Previous Analyses -->
         <TextView
